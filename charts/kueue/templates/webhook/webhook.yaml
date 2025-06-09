@@ -1,30 +1,51 @@
-{{- $integrationsConfig := (fromYaml .Values.managerConfig.controllerManagerConfigYaml).integrations }}
-{{- $managerConfig := (fromYaml .Values.managerConfig.controllerManagerConfigYaml) }}
+---
+# Source: kueue/templates/webhook/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    helm.sh/chart: kueue-0.1.0
+    app.kubernetes.io/name: kueue
+    app.kubernetes.io/instance: release-name
+    control-plane: controller-manager
+    app.kubernetes.io/version: "v0.12.2"
+    app.kubernetes.io/managed-by: Helm
+  name: 'release-name-kueue-webhook-service'
+  namespace: 'default'
+spec:
+  type: 'ClusterIP'
+  selector:
+    app.kubernetes.io/name: kueue
+    app.kubernetes.io/instance: release-name
+    control-plane: controller-manager
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 9443
+---
+# Source: kueue/templates/webhook/manifests.yaml
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   labels:
-  {{- include "kueue.labels" . | nindent 4 }}
-  name: '{{ include "kueue.fullname" . }}-mutating-webhook-configuration'
-  {{- if .Values.enableCertManager }}
-  annotations:
-    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "kueue.fullname" . }}-serving-cert
-  {{- end }}
-  namespace: '{{ .Release.Namespace }}'
+    helm.sh/chart: kueue-0.1.0
+    app.kubernetes.io/name: kueue
+    app.kubernetes.io/instance: release-name
+    control-plane: controller-manager
+    app.kubernetes.io/version: "v0.12.2"
+    app.kubernetes.io/managed-by: Helm
+  name: 'release-name-kueue-mutating-webhook-configuration'
+  namespace: 'default'
 webhooks:
   - admissionReviewVersions:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /mutate-workload-codeflare-dev-v1beta2-appwrapper
     failurePolicy: Fail
     name: mappwrapper.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - workload.codeflare.dev
@@ -35,31 +56,23 @@ webhooks:
         resources:
           - appwrappers
     sideEffects: None
-    reinvocationPolicy: '{{ .Values.mutatingWebhook.reinvocationPolicy }}'
+    reinvocationPolicy: 'Never'
   - admissionReviewVersions:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /mutate-apps-v1-deployment
     name: mdeployment.kb.io
-    {{- if has "deployment" $integrationsConfig.frameworks }}
-    failurePolicy: Fail
-    {{- else }}
     failurePolicy: Ignore
-    {{- end }}
     namespaceSelector:
-      {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") -}}
-        {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 -}}
-      {{- else }}
       matchExpressions:
         - key: kubernetes.io/metadata.name
           operator: NotIn
           values:
             - kube-system
-            - '{{ .Release.Namespace }}'
-      {{- end }}
+            - 'default'
     rules:
       - apiGroups:
           - apps
@@ -71,23 +84,19 @@ webhooks:
         resources:
           - deployments
     sideEffects: None
-    reinvocationPolicy: '{{ .Values.mutatingWebhook.reinvocationPolicy }}'
+    reinvocationPolicy: 'Never'
   - admissionReviewVersions:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /mutate-batch-v1-job
     failurePolicy: Fail
     name: mjob.kb.io
     objectSelector:
       matchLabels:
         app.kubernetes.io/managed-by: kueue
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - batch
@@ -98,20 +107,16 @@ webhooks:
         resources:
           - jobs
     sideEffects: None
-    reinvocationPolicy: '{{ .Values.mutatingWebhook.reinvocationPolicy }}'
+    reinvocationPolicy: 'Never'
   - admissionReviewVersions:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /mutate-jobset-x-k8s-io-v1alpha2-jobset
     failurePolicy: Fail
     name: mjobset.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - jobset.x-k8s.io
@@ -122,20 +127,16 @@ webhooks:
         resources:
           - jobsets
     sideEffects: None
-    reinvocationPolicy: '{{ .Values.mutatingWebhook.reinvocationPolicy }}'
+    reinvocationPolicy: 'Never'
   - admissionReviewVersions:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /mutate-kubeflow-org-v1-jaxjob
     failurePolicy: Fail
     name: mjaxjob.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - kubeflow.org
@@ -146,20 +147,16 @@ webhooks:
         resources:
           - jaxjobs
     sideEffects: None
-    reinvocationPolicy: '{{ .Values.mutatingWebhook.reinvocationPolicy }}'
+    reinvocationPolicy: 'Never'
   - admissionReviewVersions:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /mutate-kubeflow-org-v1-paddlejob
     failurePolicy: Fail
     name: mpaddlejob.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - kubeflow.org
@@ -170,20 +167,16 @@ webhooks:
         resources:
           - paddlejobs
     sideEffects: None
-    reinvocationPolicy: '{{ .Values.mutatingWebhook.reinvocationPolicy }}'
+    reinvocationPolicy: 'Never'
   - admissionReviewVersions:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /mutate-kubeflow-org-v1-pytorchjob
     failurePolicy: Fail
     name: mpytorchjob.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - kubeflow.org
@@ -194,20 +187,16 @@ webhooks:
         resources:
           - pytorchjobs
     sideEffects: None
-    reinvocationPolicy: '{{ .Values.mutatingWebhook.reinvocationPolicy }}'
+    reinvocationPolicy: 'Never'
   - admissionReviewVersions:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /mutate-kubeflow-org-v1-tfjob
     failurePolicy: Fail
     name: mtfjob.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - kubeflow.org
@@ -218,20 +207,16 @@ webhooks:
         resources:
           - tfjobs
     sideEffects: None
-    reinvocationPolicy: '{{ .Values.mutatingWebhook.reinvocationPolicy }}'
+    reinvocationPolicy: 'Never'
   - admissionReviewVersions:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /mutate-kubeflow-org-v1-xgboostjob
     failurePolicy: Fail
     name: mxgboostjob.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - kubeflow.org
@@ -242,31 +227,23 @@ webhooks:
         resources:
           - xgboostjobs
     sideEffects: None
-    reinvocationPolicy: '{{ .Values.mutatingWebhook.reinvocationPolicy }}'
+    reinvocationPolicy: 'Never'
   - admissionReviewVersions:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /mutate--v1-pod
     name: mpod.kb.io
-    {{- if has "pod" $integrationsConfig.frameworks }}
-    failurePolicy: Fail
-    {{- else }}
     failurePolicy: Ignore
-    {{- end }}
     namespaceSelector:
-      {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") -}}
-        {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 -}}
-      {{- else }}
       matchExpressions:
         - key: kubernetes.io/metadata.name
           operator: NotIn
           values:
             - kube-system
-            - '{{ .Release.Namespace }}'
-      {{- end }}
+            - 'default'
     rules:
       - apiGroups:
           - ""
@@ -277,20 +254,16 @@ webhooks:
         resources:
           - pods
     sideEffects: None
-    reinvocationPolicy: '{{ .Values.mutatingWebhook.reinvocationPolicy }}'
+    reinvocationPolicy: 'Never'
   - admissionReviewVersions:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /mutate-leaderworkerset-x-k8s-io-v1-leaderworkerset
     failurePolicy: Fail
     name: mleaderworkerset.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - leaderworkerset.x-k8s.io
@@ -302,20 +275,16 @@ webhooks:
         resources:
           - leaderworkersets
     sideEffects: None
-    reinvocationPolicy: '{{ .Values.mutatingWebhook.reinvocationPolicy }}'
+    reinvocationPolicy: 'Never'
   - admissionReviewVersions:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /mutate-kubeflow-org-v2beta1-mpijob
     failurePolicy: Fail
     name: mmpijob.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - kubeflow.org
@@ -326,20 +295,16 @@ webhooks:
         resources:
           - mpijobs
     sideEffects: None
-    reinvocationPolicy: '{{ .Values.mutatingWebhook.reinvocationPolicy }}'
+    reinvocationPolicy: 'Never'
   - admissionReviewVersions:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /mutate-ray-io-v1-raycluster
     failurePolicy: Fail
     name: mraycluster.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - ray.io
@@ -350,20 +315,16 @@ webhooks:
         resources:
           - rayclusters
     sideEffects: None
-    reinvocationPolicy: '{{ .Values.mutatingWebhook.reinvocationPolicy }}'
+    reinvocationPolicy: 'Never'
   - admissionReviewVersions:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /mutate-ray-io-v1-rayjob
     failurePolicy: Fail
     name: mrayjob.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - ray.io
@@ -374,31 +335,23 @@ webhooks:
         resources:
           - rayjobs
     sideEffects: None
-    reinvocationPolicy: '{{ .Values.mutatingWebhook.reinvocationPolicy }}'
+    reinvocationPolicy: 'Never'
   - admissionReviewVersions:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /mutate-apps-v1-statefulset
     name: mstatefulset.kb.io
-    {{- if has "statefulset" $integrationsConfig.frameworks }}
-    failurePolicy: Fail
-    {{- else }}
     failurePolicy: Ignore
-    {{- end }}
     namespaceSelector:
-      {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") -}}
-        {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 -}}
-      {{- else }}
       matchExpressions:
         - key: kubernetes.io/metadata.name
           operator: NotIn
           values:
             - kube-system
-            - '{{ .Release.Namespace }}'
-      {{- end }}
+            - 'default'
     rules:
       - apiGroups:
           - apps
@@ -410,13 +363,13 @@ webhooks:
         resources:
           - statefulsets
     sideEffects: None
-    reinvocationPolicy: '{{ .Values.mutatingWebhook.reinvocationPolicy }}'
+    reinvocationPolicy: 'Never'
   - admissionReviewVersions:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /mutate-kueue-x-k8s-io-v1beta1-clusterqueue
     failurePolicy: Fail
     name: mclusterqueue.kb.io
@@ -430,13 +383,13 @@ webhooks:
         resources:
           - clusterqueues
     sideEffects: None
-    reinvocationPolicy: '{{ .Values.mutatingWebhook.reinvocationPolicy }}'
+    reinvocationPolicy: 'Never'
   - admissionReviewVersions:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /mutate-kueue-x-k8s-io-v1beta1-resourceflavor
     failurePolicy: Fail
     name: mresourceflavor.kb.io
@@ -450,13 +403,13 @@ webhooks:
         resources:
           - resourceflavors
     sideEffects: None
-    reinvocationPolicy: '{{ .Values.mutatingWebhook.reinvocationPolicy }}'
+    reinvocationPolicy: 'Never'
   - admissionReviewVersions:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /mutate-kueue-x-k8s-io-v1beta1-workload
     failurePolicy: Fail
     name: mworkload.kb.io
@@ -470,33 +423,31 @@ webhooks:
         resources:
           - workloads
     sideEffects: None
-    reinvocationPolicy: '{{ .Values.mutatingWebhook.reinvocationPolicy }}'
+    reinvocationPolicy: 'Never'
 ---
+# Source: kueue/templates/webhook/manifests.yaml
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   labels:
-  {{- include "kueue.labels" . | nindent 4 }}
-  name: '{{ include "kueue.fullname" . }}-validating-webhook-configuration'
-  {{- if .Values.enableCertManager }}
-  annotations:
-    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "kueue.fullname" . }}-serving-cert
-  {{- end }}
-  namespace: '{{ .Release.Namespace }}'
+    helm.sh/chart: kueue-0.1.0
+    app.kubernetes.io/name: kueue
+    app.kubernetes.io/instance: release-name
+    control-plane: controller-manager
+    app.kubernetes.io/version: "v0.12.2"
+    app.kubernetes.io/managed-by: Helm
+  name: 'release-name-kueue-validating-webhook-configuration'
+  namespace: 'default'
 webhooks:
   - admissionReviewVersions:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /validate-workload-codeflare-dev-v1beta2-appwrapper
     failurePolicy: Fail
     name: vappwrapper.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - workload.codeflare.dev
@@ -512,26 +463,18 @@ webhooks:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /validate-apps-v1-deployment
     name: vdeployment.kb.io
-    {{- if has "deployment" $integrationsConfig.frameworks }}
-    failurePolicy: Fail
-    {{- else }}
     failurePolicy: Ignore
-    {{- end }}
     namespaceSelector:
-      {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") -}}
-        {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 -}}
-      {{- else }}
       matchExpressions:
         - key: kubernetes.io/metadata.name
           operator: NotIn
           values:
             - kube-system
-            - '{{ .Release.Namespace }}'
-      {{- end }}
+            - 'default'
     rules:
       - apiGroups:
           - apps
@@ -547,18 +490,14 @@ webhooks:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /validate-batch-v1-job
     failurePolicy: Fail
     name: vjob.kb.io
     objectSelector:
       matchLabels:
         app.kubernetes.io/managed-by: kueue
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - batch
@@ -574,15 +513,11 @@ webhooks:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /validate-jobset-x-k8s-io-v1alpha2-jobset
     failurePolicy: Fail
     name: vjobset.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - jobset.x-k8s.io
@@ -598,15 +533,11 @@ webhooks:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /validate-kubeflow-org-v1-jaxjob
     failurePolicy: Fail
     name: vjaxjob.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - kubeflow.org
@@ -622,15 +553,11 @@ webhooks:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /validate-kubeflow-org-v1-paddlejob
     failurePolicy: Fail
     name: vpaddlejob.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - kubeflow.org
@@ -646,15 +573,11 @@ webhooks:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /validate-kubeflow-org-v1-pytorchjob
     failurePolicy: Fail
     name: vpytorchjob.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - kubeflow.org
@@ -670,15 +593,11 @@ webhooks:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /validate-kubeflow-org-v1-tfjob
     failurePolicy: Fail
     name: vtfjob.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - kubeflow.org
@@ -694,15 +613,11 @@ webhooks:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /validate-kubeflow-org-v1-xgboostjob
     failurePolicy: Fail
     name: vxgboostjob.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - kubeflow.org
@@ -718,26 +633,18 @@ webhooks:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /validate--v1-pod
     name: vpod.kb.io
-    {{- if has "pod" $integrationsConfig.frameworks }}
-    failurePolicy: Fail
-    {{- else }}
     failurePolicy: Ignore
-    {{- end }}
     namespaceSelector:
-      {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") -}}
-        {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 -}}
-      {{- else }}
       matchExpressions:
         - key: kubernetes.io/metadata.name
           operator: NotIn
           values:
             - kube-system
-            - '{{ .Release.Namespace }}'
-      {{- end }}
+            - 'default'
     rules:
       - apiGroups:
           - ""
@@ -753,15 +660,11 @@ webhooks:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /validate-leaderworkerset-x-k8s-io-v1-leaderworkerset
     failurePolicy: Fail
     name: vleaderworkerset.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - leaderworkerset.x-k8s.io
@@ -777,15 +680,11 @@ webhooks:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /validate-kubeflow-org-v2beta1-mpijob
     failurePolicy: Fail
     name: vmpijob.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - kubeflow.org
@@ -801,15 +700,11 @@ webhooks:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /validate-ray-io-v1-raycluster
     failurePolicy: Fail
     name: vraycluster.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - ray.io
@@ -825,15 +720,11 @@ webhooks:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /validate-ray-io-v1-rayjob
     failurePolicy: Fail
     name: vrayjob.kb.io
-    {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") }}
-    namespaceSelector:
-      {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 }}
-    {{- end }}
     rules:
       - apiGroups:
           - ray.io
@@ -849,26 +740,18 @@ webhooks:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /validate-apps-v1-statefulset
     name: vstatefulset.kb.io
-    {{- if has "statefulset" $integrationsConfig.frameworks }}
-    failurePolicy: Fail
-    {{- else }}
     failurePolicy: Ignore
-    {{- end }}
     namespaceSelector:
-      {{- if (hasKey $managerConfig "managedJobsNamespaceSelector") -}}
-        {{- toYaml $managerConfig.managedJobsNamespaceSelector | nindent 6 -}}
-      {{- else }}
       matchExpressions:
         - key: kubernetes.io/metadata.name
           operator: NotIn
           values:
             - kube-system
-            - '{{ .Release.Namespace }}'
-      {{- end }}
+            - 'default'
     rules:
       - apiGroups:
           - apps
@@ -884,8 +767,8 @@ webhooks:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /validate-kueue-x-k8s-io-v1beta1-clusterqueue
     failurePolicy: Fail
     name: vclusterqueue.kb.io
@@ -904,8 +787,8 @@ webhooks:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /validate-kueue-x-k8s-io-v1alpha1-cohort
     failurePolicy: Fail
     name: vcohort.kb.io
@@ -924,8 +807,8 @@ webhooks:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /validate-kueue-x-k8s-io-v1beta1-resourceflavor
     failurePolicy: Fail
     name: vresourceflavor.kb.io
@@ -944,8 +827,8 @@ webhooks:
       - v1
     clientConfig:
       service:
-        name: '{{ include "kueue.fullname" . }}-webhook-service'
-        namespace: '{{ .Release.Namespace }}'
+        name: 'release-name-kueue-webhook-service'
+        namespace: 'default'
         path: /validate-kueue-x-k8s-io-v1beta1-workload
     failurePolicy: Fail
     name: vworkload.kb.io
